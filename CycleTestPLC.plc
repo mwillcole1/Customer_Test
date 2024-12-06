@@ -1,0 +1,49 @@
+// THIS PLC PROGRAM RUNS THE MOTOR USING THE FOLLOWING GLOBAL VARIABLES, 
+//	WHICH MUST ALSO BE ADDED TO THE global definitions.pmh FILE:
+//		Speed
+//		Counts
+//		CycleCount
+//		CycleStart
+//************************************************************************
+
+OPEN PLC CycleTest
+
+IF(CycleStart == 1)
+{
+	cycle_counter = 0			// INITIALIZE COUNTER
+	JOG/ 1						// ENABLE SERVO
+	CALL Timer.msec(500)
+
+	// HOMING ROUTINE CAN BE INSERTED HERE.
+	//Motor[1].HomeOffset = 0		// SET HOME OFFSET VALUE HERE, IF USED
+	//Motor[1].HomeVel = (HomingVelocity)		// SET HomingVelocity IN counts/msec; SIGN OF VALUE SETS DIRECTION OF MOTOR
+	//HOME 1						// COMMAND TO START HOMING; MUST CONFIGURE HOMING SETTINGS FIRST
+	//CALL Timer.msec(5)
+	//WHILE(Motor[1].HomeComplete == 0){}		// WAIT WHILE HOMING ROUTINE COMPLETES
+	//CALL Timer.msec(5)
+	//WHILE(Motor[1].InPos == 0){}				// WAIT FOR MOTOR TO STOP, ESPECIALLY IN CASE WHERE HomeOffset IS USED
+
+	Motor[1].JogSpeed = (Speed)	// SET Speed IN counts/msec
+	Motor[1].JogTa = 500		// A POSITIVE VALUE OF JogTa SETS THE ACCELERATION RAMP UP/DOWN TIME IN msec
+
+	WHILE(CycleCount > cycle_counter)
+	{
+		JOG 1 : (Counts)	// SET DISTANCE IN Counts; THE ':' INDICATES A RELATIVE MOVE; USE '=' FOR ABSOLUTE MOVE
+		CALL Timer.msec(5)
+		WHILE(Motor[1].DesVelZero == 0){}	// WAIT UNTIL COMMANDED MOVE COMPLETES
+
+		CALL Timer.msec(5)	// SET DELAY TIME IN BETWEEN MOVES HERE
+
+		JOG 1 : (-Counts)
+		CALL Timer.msec(5)
+		WHILE(Motor[1].DesVelZero == 0){}	// WAIT UNTIL COMMANDED MOVE COMPLETES
+	
+		cycle_counter ++	// INCREMENT cycle_counter
+	}
+
+	CALL Timer.msec(500)
+	KILL 1						// DISABLE SERVO
+	CycleStart = 0				// RESET CycleStart BIT
+}
+
+CLOSE
